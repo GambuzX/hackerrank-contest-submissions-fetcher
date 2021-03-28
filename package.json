@@ -1,0 +1,24 @@
+{
+  "name": "hackerrank-contest-submissions-scraper",
+  "version": "1.0.0",
+  "description": "HackerRank contest submissions scraper",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GambuzX/hackerrank-contest-submissions-scraper.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GambuzX/hackerrank-contest-submissions-scraper/issues"
+  },
+  "homepage": "https://github.com/GambuzX/hackerrank-contest-submissions-scraper#readme",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "dotenv": "^8.2.0"
+  }
+}
