@@ -2,16 +2,18 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const urls = require('./urls');
+const { sleep, axiosGet, randomUserAgent, createFolder } = require('./utils.js');
 require('dotenv').config()
 
 // set default headers for authenticating requests
 axios.defaults.headers.common['Cookie'] = process.env.COOKIE;
-axios.defaults.headers.common['User-Agent'] = 'scraper'; // this needs to have some value or it returns 403
+axios.defaults.headers.common['User-Agent'] = randomUserAgent(); // this needs to have some value or it returns 403
 
 // global variables
 const contestSlug = process.env.CONTEST;
 const resultsPath = 'results';
 const contestPath = path.join(resultsPath, contestSlug);
+const fetchSubmissionsDelay = 30; // time to wait between API calls if error 429, in seconds
 
 // map language to file extension
 const fileExtensions = {
@@ -24,10 +26,10 @@ const fileExtensions = {
     python: 'py'
 };
 
-
 async function getContestSubmissions() {
     // get all contest submissions
-    const response = await axios.get(urls.contestSubmissions(contestSlug));
+    const response = await axiosGet(urls.contestSubmissions(contestSlug));
+    if (response.error) throw response.error;
 
     // filter submissions that are code and whose file extension is known
     return response.data.models.filter((submission) => {
@@ -62,11 +64,6 @@ function separateSubmissionsPerUserPerChallenge(submissions) {
     }, {});
 }
 
-function createFolder(path) {
-    if (!fs.existsSync(path))
-        fs.mkdirSync(path);
-}
-
 function createContestFolder() {
     createFolder(resultsPath);
     createFolder(contestPath);
@@ -79,19 +76,33 @@ function saveJSONFile(data, filename) {
     });
 }
 
-async function fetchSubmissionCode(submissionId) {
-    // fetch submission info
-    const response = await axios.get(urls.submissionInfo(contestSlug, submissionId))
-    const submission = response.data.model;
+async function fetchSubmissionsCode(submissionIds) {
+    for (let i = 0; i < submissionIds.length; i++) {
+        const submissionId = submissionIds[i];
+        
+        // fetch submission info
+        const response = await axiosGet(urls.submissionInfo(contestSlug, submissionId));
+        if (response.error) {
+            const res = response.error.response;
+            if (!res || res.status !== 429) throw response.error;
 
-    // create user folder
-    const userPath = path.join(contestPath, submission.hacker_username);
-    createFolder(userPath);
-
-    // save submission code
-    const filename = `${submission.challenge_slug}-${submissionId}.${fileExtensions[submission.language]}`;
-    const filePath = path.join(userPath, filename);
-    fs.writeFileSync(filePath, submission.code);
+            // too many requests, wait some time and try again
+            console.log(`Too many requests, waiting for ${fetchSubmissionsDelay}s and trying again`);
+            await sleep(fetchSubmissionsDelay*1000);
+            i--;
+            continue;
+        }
+        const submission = response.data.model;
+    
+        // create user folder
+        const userPath = path.join(contestPath, submission.hacker_username);
+        createFolder(userPath);
+    
+        // save submission code
+        const filename = `${submission.challenge_slug}-${submissionId}.${fileExtensions[submission.language]}`;
+        const filePath = path.join(userPath, filename);
+        fs.writeFileSync(filePath, submission.code);
+    }
 }
 
 
@@ -109,11 +120,10 @@ async function fetchSubmissionCode(submissionId) {
         saveJSONFile(submissionsPerUserPerChallenge, 'submissionsPerUserPerChallenge');
 
         // fetch and save the code of each submission
-        await Promise.all(submissions.map(submission => submission.id).map(fetchSubmissionCode));
+        await fetchSubmissionsCode(submissions.map(submission => submission.id));
     }
     catch (error) {
-        console.error("An error occured: %d", error.statusCode);
-        console.error(error);
+        console.error(`An error ocurred: ${error}`);
     }
 })();
 
