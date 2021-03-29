@@ -19,6 +19,31 @@ async function getContestSubmissions() {
     return response.data.models;
 }
 
+function separateSubmissionsPerUser(submissions) {
+    return submissions.reduce((acc, curr) => {
+        const user = curr.hacker_username;           
+        if (!(user in acc)) 
+            acc[user] = [];
+
+        acc[user].push(curr);
+        return acc;
+    }, {});
+}
+
+function separateSubmissionsPerUserPerChallenge(submissions) {
+    return submissions.reduce((acc, curr) => {
+        const user = curr.hacker_username;           
+        const challenge = curr.challenge.slug;
+        if (!(user in acc)) 
+            acc[user] = {};
+        if (!(challenge in acc[user]))
+            acc[user][challenge] = [];
+
+        acc[user][challenge].push(curr);
+        return acc;
+    }, {});
+}
+
 function createContestFolder() {
     if (!fs.existsSync(resultsPath)) {
         fs.mkdirSync(resultsPath);
@@ -28,12 +53,9 @@ function createContestFolder() {
     }
 }
 
-function saveUsersSubmissions(usersSubmissions) {
-    createContestFolder();
-
-    // save general submissions info
-    const filePath = path.join(contestPath, 'submissions.json');
-    fs.writeFile(filePath, JSON.stringify(usersSubmissions,null,2), (err) => {
+function saveJSONFile(data, filename) {
+    const filePath = path.join(contestPath, `${filename}.json`);
+    fs.writeFile(filePath, JSON.stringify(data,null,2), (err) => {
         if (err) console.log(err);
     });
 }
@@ -43,19 +65,14 @@ function saveUsersSubmissions(usersSubmissions) {
     try {
         // get all contest submissions
         const submissions = await getContestSubmissions();
+        const submissionsPerUser = separateSubmissionsPerUser(submissions);
+        const submissionsPerUserPerChallenge = separateSubmissionsPerUserPerChallenge(submissions);
 
-        // separate submissions per user
-        const submissionsPerUser = submissions.reduce((acc, curr) => {
-            const user = curr.hacker_username;           
-            if (!(user in acc)) 
-                acc[user] = [];
-
-            acc[user].push(curr);
-            return acc;
-        }, {});
-
-        // save the submissions of each user in separate folders
-        saveUsersSubmissions(submissionsPerUser);
+        // save general info about submissions
+        createContestFolder();
+        saveJSONFile(submissions, 'submissions');
+        saveJSONFile(submissionsPerUser, 'submissionsPerUser');
+        saveJSONFile(submissionsPerUserPerChallenge, 'submissionsPerUserPerChallenge');
     }
     catch (error) {
         console.error("An error occured: %d", error.statusCode);
@@ -64,8 +81,8 @@ function saveUsersSubmissions(usersSubmissions) {
 })();
 
 /* TODO
- - separate user info per challenge
  - call submissionInfo API and save the code of each user's submission
+ - add prints to inform user about what is happening
  - detect users with more than 1 submissions per week
  - detect users copying from each other
 */
