@@ -5,9 +5,9 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function axiosGet(url) {
+async function axiosGet(url, params={}) {
     try {
-        const response = await axios.get(url);
+        const response = await axios.get(url, { params });
         return response;
     }
     catch (error) {

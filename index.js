@@ -28,7 +28,10 @@ const fileExtensions = {
 
 async function getContestSubmissions() {
     // get all contest submissions
-    const response = await axiosGet(urls.contestSubmissions(contestSlug));
+    const params = {
+        limit: 99999999 // max number of submissions to fetch, by default is only 10
+    }
+    const response = await axiosGet(urls.contestSubmissions(contestSlug), params);
     if (response.error) throw response.error;
 
     // filter submissions that are code and whose file extension is known
@@ -102,6 +105,8 @@ async function fetchSubmissionsCode(submissionIds) {
         const filename = `${submission.challenge_slug}-${submissionId}.${fileExtensions[submission.language]}`;
         const filePath = path.join(userPath, filename);
         fs.writeFileSync(filePath, submission.code);
+        
+        if (i % 10 == 0) console.log(`Fetched submission ${i+1}/${submissionIds.length}`)
     }
 }
 
@@ -109,17 +114,20 @@ async function fetchSubmissionsCode(submissionIds) {
 (async () => {
     try {
         // get all contest submissions
+        console.log("[+] Fetching contest submissions")
         const submissions = await getContestSubmissions();
         const submissionsPerUser = separateSubmissionsPerUser(submissions);
         const submissionsPerUserPerChallenge = separateSubmissionsPerUserPerChallenge(submissions);
 
         // save general info about submissions
+        console.log("[+] Saving submissions info")
         createContestFolder(resultsPath);
         saveJSONFile(submissions, 'submissions');
         saveJSONFile(submissionsPerUser, 'submissionsPerUser');
         saveJSONFile(submissionsPerUserPerChallenge, 'submissionsPerUserPerChallenge');
 
         // fetch and save the code of each submission
+        console.log("[+] Fetching the code for each submission")
         await fetchSubmissionsCode(submissions.map(submission => submission.id));
     }
     catch (error) {
@@ -128,7 +136,6 @@ async function fetchSubmissionsCode(submissionIds) {
 })();
 
 /* TODO
- - add prints to inform user about what is happening
  - detect users with more than 1 submissions per week
  - detect users copying from each other
 */
