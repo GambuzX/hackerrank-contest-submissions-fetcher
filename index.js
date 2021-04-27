@@ -13,7 +13,7 @@ axios.defaults.headers.common['User-Agent'] = randomUserAgent(); // this needs t
 const contestSlug = process.env.CONTEST;
 const resultsPath = 'results';
 const contestPath = path.join(resultsPath, contestSlug);
-const fetchSubmissionsDelay = 30; // time to wait between API calls if error 429, in seconds
+const fetchSubmissionsDelay = process.env.FETCH_DELAY || 30; // time to wait between API calls if error 429, in seconds
 
 // map language to file extension
 const fileExtensions = {
@@ -134,8 +134,3 @@ async function fetchSubmissionsCode(submissionIds) {
         console.error(`An error ocurred: ${error}`);
     }
 })();
-
-/* TODO
- - detect users with more than 1 submissions per week
- - detect users copying from each other
-*/
