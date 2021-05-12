@@ -129,6 +129,8 @@ async function fetchSubmissionsCode(submissionIds) {
         // fetch and save the code of each submission
         console.log("[+] Fetching the code for each submission")
         await fetchSubmissionsCode(submissions.map(submission => submission.id));
+
+        console.log("[+] Finished")
     }
     catch (error) {
         console.error(`An error ocurred: ${error}`);
