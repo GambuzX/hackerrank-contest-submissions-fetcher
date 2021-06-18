@@ -102,7 +102,8 @@ async function fetchSubmissionsCode(submissionIds) {
         createFolder(userPath);
     
         // save submission code
-        const filename = `${submission.challenge_slug}-${submissionId}.${fileExtensions[submission.language]}`;
+        const scoreString = Math.round((submission.score*100 + Number.EPSILON) * 100) / 100
+        const filename = `${submission.challenge_slug}-${submission.hacker_username}-${scoreString}-${submissionId}.${fileExtensions[submission.language]}`;
         const filePath = path.join(userPath, filename);
         fs.writeFileSync(filePath, submission.code);
         
